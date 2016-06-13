@@ -4,5 +4,5 @@
 *.html
 *coverage.*
 *.iml
-locations-rw-neo4j
+special-reports-rw-neo4j
 .idea/
