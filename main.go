@@ -11,7 +11,6 @@ import (
 	"github.com/Financial-Times/special-reports-rw-neo4j/specialreports"
 	log "github.com/Sirupsen/logrus"
 	"github.com/jawher/mow.cli"
-	"github.com/jmcvetta/neoism"
 )
 
 func init() {
@@ -58,13 +57,15 @@ func main() {
 	})
 
 	app.Action = func() {
-		db, err := neoism.Connect(*neoURL)
+		conf := neoutils.DefaultConnectionConfig()
+		conf.BatchSize = *batchSize
+		db, err := neoutils.Connect(*neoURL, conf)
 		if err != nil {
 			log.Errorf("Could not connect to neo4j, error=[%s]\n", err)
 		}
 
-		batchRunner := neoutils.NewBatchCypherRunner(neoutils.StringerDb{db}, *batchSize)
-		specialReportsDriver := specialreports.NewCypherSpecialReportsService(batchRunner, db)
+		specialReportsDriver := specialreports.NewCypherSpecialReportsService(db)
+		specialReportsDriver.Initialise()
 
 		baseftrwapp.OutputMetricsIfRequired(*graphiteTCPAddress, *graphitePrefix, *logMetrics)
 
@@ -74,7 +75,7 @@ func main() {
 
 		var checks []v1a.Check
 		for _, e := range endpoints {
-			checks = append(checks, makeCheck(e, batchRunner))
+			checks = append(checks, makeCheck(e, db))
 		}
 
 		baseftrwapp.RunServer(endpoints,
