@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Financial-Times/neo-utils-go/neoutils"
 	"github.com/jmcvetta/neoism"
+	"sort"
 )
 
 type service struct {
@@ -51,7 +52,9 @@ return distinct n.uuid as uuid, n.prefLabel as prefLabel, labels(n) as types, {u
 		return SpecialReport{}, false, nil
 	}
 
-	return results[0], true, nil
+	result := results[0]
+	sort.Strings(result.AlternativeIdentifiers.TME)
+	return result, true, nil
 }
 
 func (s service) Write(thing interface{}) error {
