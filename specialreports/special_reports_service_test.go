@@ -163,6 +163,6 @@ func getSpecialReportsCypherDriver(t *testing.T) service {
 
 func cleanUp(t *testing.T, uuid string, specialreportsDriver service) {
 	found, err := specialreportsDriver.Delete(uuid)
+	assert.NoError(t, err, "Error deleting specialreport for uuid %s, error message [%s]", uuid, err.Error())
 	assert.True(t, found, "Didn't manage to delete specialreport for uuid %", uuid)
-	assert.NoError(t, err, "Error deleting specialreport for uuid %s", uuid)
 }
