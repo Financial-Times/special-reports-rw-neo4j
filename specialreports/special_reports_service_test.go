@@ -36,6 +36,18 @@ func TestConnectivityCheck(t *testing.T) {
 	err := specialreportsDriver.Check()
 	assert.NoError(t, err, "Unexpected error on connectivity check")
 }
+func TestPrefLabelSpecialCharactersAreHandledByCreate(t *testing.T) {
+	specialreportsDriver := getSpecialReportsCypherDriver(t)
+	defer cleanUp(t, specialreportUUID, specialreportsDriver)
+
+	specialreportToWrite := specialreportToWrite(specialreportUUID, specialCharPrefLabel, []string{}, []string{specialreportUUID})
+
+	assert.NoError(t, specialreportsDriver.Write(specialreportToWrite), "Failed to write specialreport")
+	//add default types that will be automatically added by the writer
+	specialreportToWrite.Types = defaultTypes()
+	//check if specialreportToWrite is the same with the one inside the DB
+	readSpecialReportForUUIDAndCheckFieldsMatch(t, specialreportsDriver, specialreportUUID, specialreportToWrite)
+}
 
 func TestPrefLabelIsCorrectlyWritten(t *testing.T) {
 	specialreportsDriver := getSpecialReportsCypherDriver(t)
@@ -50,19 +62,6 @@ func TestPrefLabelIsCorrectlyWritten(t *testing.T) {
 	assert.True(t, found, "Failed to read a Special Report that we have written.")
 	assert.NotEmpty(t, storedSpecialReport)
 	assert.Equal(t, prefLabel, storedSpecialReport.(SpecialReport).PrefLabel, "PrefLabel should be %s", prefLabel)
-}
-
-func TestPrefLabelSpecialCharactersAreHandledByCreate(t *testing.T) {
-	specialreportsDriver := getSpecialReportsCypherDriver(t)
-	defer cleanUp(t, specialreportUUID, specialreportsDriver)
-
-	specialreportToWrite := specialreportToWrite(specialreportUUID, specialCharPrefLabel, []string{}, []string{specialreportUUID})
-
-	assert.NoError(t, specialreportsDriver.Write(specialreportToWrite), "Failed to write specialreport")
-	//add default types that will be automatically added by the writer
-	specialreportToWrite.Types = defaultTypes()
-	//check if specialreportToWrite is the same with the one inside the DB
-	readSpecialReportForUUIDAndCheckFieldsMatch(t, specialreportsDriver, specialreportUUID, specialreportToWrite)
 }
 
 func TestCreateCompleteSpecialReportWithPropsAndIdentifiers(t *testing.T) {
