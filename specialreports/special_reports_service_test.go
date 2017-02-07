@@ -41,7 +41,7 @@ func TestPrefLabelIsCorrectlyWritten(t *testing.T) {
 	specialreportsDriver := getSpecialReportsCypherDriver(t)
 	defer cleanUp(t, specialreportUUID, specialreportsDriver)
 
-	sr := specialreportToWrite(specialreportUUID, prefLabel, nil, []string{specialreportUUID})
+	sr := specialreportToWrite(specialreportUUID, prefLabel, []string{}, []string{specialreportUUID})
 	err := specialreportsDriver.Write(sr)
 	assert.NoError(t, err, "ERROR happened during write time")
 
@@ -163,6 +163,6 @@ func getSpecialReportsCypherDriver(t *testing.T) service {
 
 func cleanUp(t *testing.T, uuid string, specialreportsDriver service) {
 	found, err := specialreportsDriver.Delete(uuid)
-	assert.NoError(t, err, "Error deleting specialreport for uuid %s, error message [%s]", uuid, err.Error())
+	assert.NoError(t, err, "Error deleting specialreport for uuid %s", uuid)
 	assert.True(t, found, "Didn't manage to delete specialreport for uuid %", uuid)
 }
