@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+	"sort"
 )
 
 const (
@@ -16,7 +17,19 @@ const (
 	specialCharPrefLabel = "Test 'special chars"
 )
 
-var defaultTypes = []string{"Thing", "Concept", "Classification", "SpecialReport"}
+func specialreportToWrite(uuid string, prefLabel string, tmeIds [] string, uuids []string) SpecialReport {
+	sort.Strings(tmeIds)
+	sort.Strings(uuids)
+	alternativeIdentifiers := alternativeIdentifiers{TME: tmeIds, UUIDS: uuids}
+	sr := SpecialReport{UUID: uuid, PrefLabel: prefLabel, AlternativeIdentifiers: alternativeIdentifiers}
+	return sr
+}
+
+func defaultTypes() []string {
+	var defaultTypes = []string{"Thing", "Concept", "Classification", "SpecialReport"}
+	sort.Strings(defaultTypes)
+	return defaultTypes
+}
 
 func TestConnectivityCheck(t *testing.T) {
 	specialreportsDriver := getSpecialReportsCypherDriver(t)
@@ -26,116 +39,97 @@ func TestConnectivityCheck(t *testing.T) {
 
 func TestPrefLabelIsCorrectlyWritten(t *testing.T) {
 	specialreportsDriver := getSpecialReportsCypherDriver(t)
+	defer cleanUp(t, specialreportUUID, specialreportsDriver)
 
-	alternativeIdentifiers := alternativeIdentifiers{UUIDS: []string{specialreportUUID}}
-	specialreportToWrite := SpecialReport{UUID: specialreportUUID, PrefLabel: prefLabel, AlternativeIdentifiers: alternativeIdentifiers}
-
-	err := specialreportsDriver.Write(specialreportToWrite)
+	sr := specialreportToWrite(specialreportUUID, prefLabel, nil, []string{specialreportUUID})
+	err := specialreportsDriver.Write(sr)
 	assert.NoError(t, err, "ERROR happened during write time")
 
 	storedSpecialReport, found, err := specialreportsDriver.Read(specialreportUUID)
 	assert.NoError(t, err, "ERROR happened during read time")
-	assert.Equal(t, true, found)
+	assert.True(t, found, "Failed to read a Special Report that we have written.")
 	assert.NotEmpty(t, storedSpecialReport)
-
-	assert.Equal(t, prefLabel, storedSpecialReport.(SpecialReport).PrefLabel, "PrefLabel should be "+prefLabel)
-	cleanUp(t, specialreportUUID, specialreportsDriver)
+	assert.Equal(t, prefLabel, storedSpecialReport.(SpecialReport).PrefLabel, "PrefLabel should be %s", prefLabel)
 }
 
 func TestPrefLabelSpecialCharactersAreHandledByCreate(t *testing.T) {
 	specialreportsDriver := getSpecialReportsCypherDriver(t)
+	defer cleanUp(t, specialreportUUID, specialreportsDriver)
 
-	alternativeIdentifiers := alternativeIdentifiers{TME: []string{}, UUIDS: []string{specialreportUUID}}
-	specialreportToWrite := SpecialReport{UUID: specialreportUUID, PrefLabel: specialCharPrefLabel, AlternativeIdentifiers: alternativeIdentifiers}
+	specialreportToWrite := specialreportToWrite(specialreportUUID, specialCharPrefLabel, []string{}, []string{specialreportUUID})
 
 	assert.NoError(t, specialreportsDriver.Write(specialreportToWrite), "Failed to write specialreport")
-
 	//add default types that will be automatically added by the writer
-	specialreportToWrite.Types = defaultTypes
+	specialreportToWrite.Types = defaultTypes()
 	//check if specialreportToWrite is the same with the one inside the DB
 	readSpecialReportForUUIDAndCheckFieldsMatch(t, specialreportsDriver, specialreportUUID, specialreportToWrite)
-	cleanUp(t, specialreportUUID, specialreportsDriver)
 }
 
 func TestCreateCompleteSpecialReportWithPropsAndIdentifiers(t *testing.T) {
 	specialreportsDriver := getSpecialReportsCypherDriver(t)
+	defer cleanUp(t, specialreportUUID, specialreportsDriver)
 
-	alternativeIdentifiers := alternativeIdentifiers{TME: []string{tmeID}, UUIDS: []string{specialreportUUID}}
-	specialreportToWrite := SpecialReport{UUID: specialreportUUID, PrefLabel: prefLabel, AlternativeIdentifiers: alternativeIdentifiers}
+	specialreportToWrite := specialreportToWrite(specialreportUUID, prefLabel, []string{tmeID}, []string{specialreportUUID})
 
 	assert.NoError(t, specialreportsDriver.Write(specialreportToWrite), "Failed to write specialreport")
 
 	//add default types that will be automatically added by the writer
-	specialreportToWrite.Types = defaultTypes
+	specialreportToWrite.Types = defaultTypes()
+
 	//check if specialreportToWrite is the same with the one inside the DB
 	readSpecialReportForUUIDAndCheckFieldsMatch(t, specialreportsDriver, specialreportUUID, specialreportToWrite)
-	cleanUp(t, specialreportUUID, specialreportsDriver)
+
 }
 
 func TestUpdateWillRemovePropertiesAndIdentifiersNoLongerPresent(t *testing.T) {
 	specialreportsDriver := getSpecialReportsCypherDriver(t)
+	defer cleanUp(t, specialreportUUID, specialreportsDriver)
 
-	allAlternativeIdentifiers := alternativeIdentifiers{TME: []string{}, UUIDS: []string{specialreportUUID}}
-	specialreportToWrite := SpecialReport{UUID: specialreportUUID, PrefLabel: prefLabel, AlternativeIdentifiers: allAlternativeIdentifiers}
+	assert.NoError(t, specialreportsDriver.Write(specialreportToWrite(specialreportUUID, prefLabel, []string{}, []string{specialreportUUID})), "Failed to write specialreport")
 
-	assert.NoError(t, specialreportsDriver.Write(specialreportToWrite), "Failed to write specialreport")
-	//add default types that will be automatically added by the writer
-	specialreportToWrite.Types = defaultTypes
-	readSpecialReportForUUIDAndCheckFieldsMatch(t, specialreportsDriver, specialreportUUID, specialreportToWrite)
-
-	tmeAlternativeIdentifiers := alternativeIdentifiers{TME: []string{tmeID}, UUIDS: []string{specialreportUUID}}
-	updatedSpecialReport := SpecialReport{UUID: specialreportUUID, PrefLabel: specialCharPrefLabel, AlternativeIdentifiers: tmeAlternativeIdentifiers}
-
+	updatedSpecialReport := specialreportToWrite(specialreportUUID, specialCharPrefLabel, []string{}, []string{specialreportUUID})
 	assert.NoError(t, specialreportsDriver.Write(updatedSpecialReport), "Failed to write updated specialreport")
 	//add default types that will be automatically added by the writer
-	updatedSpecialReport.Types = defaultTypes
+	updatedSpecialReport.Types = defaultTypes()
 	readSpecialReportForUUIDAndCheckFieldsMatch(t, specialreportsDriver, specialreportUUID, updatedSpecialReport)
-
-	cleanUp(t, specialreportUUID, specialreportsDriver)
 }
 
 func TestDelete(t *testing.T) {
 	specialreportsDriver := getSpecialReportsCypherDriver(t)
 
-	alternativeIdentifiers := alternativeIdentifiers{TME: []string{tmeID}, UUIDS: []string{specialreportUUID}}
-	specialreportToDelete := SpecialReport{UUID: specialreportUUID, PrefLabel: prefLabel, AlternativeIdentifiers: alternativeIdentifiers}
-
+	specialreportToDelete :=  specialreportToWrite(specialreportUUID, prefLabel, []string{tmeID}, []string{specialreportUUID} )
 	assert.NoError(t, specialreportsDriver.Write(specialreportToDelete), "Failed to write specialreport")
 
 	found, err := specialreportsDriver.Delete(specialreportUUID)
-	assert.True(t, found, "Didn't manage to delete specialreport for uuid %", specialreportUUID)
 	assert.NoError(t, err, "Error deleting specialreport for uuid %s", specialreportUUID)
+	assert.True(t, found, "Didn't delete specialreport for uuid %", specialreportUUID)
 
 	p, found, err := specialreportsDriver.Read(specialreportUUID)
 
-	assert.Equal(t, SpecialReport{}, p, "Found specialreport %s who should have been deleted", p)
-	assert.False(t, found, "Found specialreport for uuid %s who should have been deleted", specialreportUUID)
 	assert.NoError(t, err, "Error trying to find specialreport for uuid %s", specialreportUUID)
+	assert.False(t, found, "Found specialreport for uuid %s who should have been deleted", specialreportUUID)
+	assert.Equal(t, SpecialReport{}, p, "Found specialreport %s who should have been deleted", p)
 }
 
 func TestCount(t *testing.T) {
 	specialreportsDriver := getSpecialReportsCypherDriver(t)
+	defer cleanUp(t, specialreportUUID, specialreportsDriver)
+	defer cleanUp(t, newSpecialReportUUID, specialreportsDriver)
 
-	alternativeIds := alternativeIdentifiers{TME: []string{tmeID}, UUIDS: []string{specialreportUUID}}
-	specialreportOneToCount := SpecialReport{UUID: specialreportUUID, PrefLabel: prefLabel, AlternativeIdentifiers: alternativeIds}
+	specialreportOneToCount := specialreportToWrite(specialreportUUID, prefLabel, []string{tmeID},[]string{specialreportUUID})
+	specialreportTwoToCount := specialreportToWrite(newSpecialReportUUID, specialCharPrefLabel, []string{newTmeID},[]string{newSpecialReportUUID})
 
 	assert.NoError(t, specialreportsDriver.Write(specialreportOneToCount), "Failed to write specialreport")
-
 	nr, err := specialreportsDriver.Count()
-	assert.Equal(t, 1, nr, "Should be 1 specialreports in DB - count differs")
-	assert.NoError(t, err, "An unexpected error occurred during count")
 
-	newAlternativeIds := alternativeIdentifiers{TME: []string{newTmeID}, UUIDS: []string{newSpecialReportUUID}}
-	specialreportTwoToCount := SpecialReport{UUID: newSpecialReportUUID, PrefLabel: specialCharPrefLabel, AlternativeIdentifiers: newAlternativeIds}
+	assert.NoError(t, err, "An unexpected error occurred during count")
+	assert.Equal(t, 1, nr, "Should be 1 specialreports in DB - count differs")
 
 	assert.NoError(t, specialreportsDriver.Write(specialreportTwoToCount), "Failed to write specialreport")
-
 	nr, err = specialreportsDriver.Count()
-	assert.Equal(t, 2, nr, "Should be 2 specialreports in DB - count differs")
-	assert.NoError(t, err, "An unexpected error occurred during count")
 
-	cleanUp(t, specialreportUUID, specialreportsDriver)
-	cleanUp(t, newSpecialReportUUID, specialreportsDriver)
+	assert.NoError(t, err, "An unexpected error occurred during count")
+	assert.Equal(t, 2, nr, "Should be 2 specialreports in DB - count differs")
 }
 
 func readSpecialReportForUUIDAndCheckFieldsMatch(t *testing.T, specialreportsDriver service, uuid string, expectedSpecialReport SpecialReport) {
@@ -144,6 +138,11 @@ func readSpecialReportForUUIDAndCheckFieldsMatch(t *testing.T, specialreportsDri
 
 	assert.NoError(t, err, "Error finding specialreport for uuid %s", uuid)
 	assert.True(t, found, "Didn't find specialreport for uuid %s", uuid)
+
+	actualSpecialReport := storedSpecialReport.(SpecialReport)
+	sort.Strings(actualSpecialReport.AlternativeIdentifiers.TME)
+	sort.Strings(actualSpecialReport.AlternativeIdentifiers.UUIDS)
+	sort.Strings(actualSpecialReport.Types)
 	assert.Equal(t, expectedSpecialReport, storedSpecialReport, "specialreports should be the same")
 }
 
