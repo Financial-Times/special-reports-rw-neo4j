@@ -1,3 +1,6 @@
+*DECOMISSIONED*
+See [Concepts RW Neo4j](https://github.com/Financial-Times/concepts-rw-neo4j) instead
+
 # Special Reports Reader/Writer for Neo4j (special-reports-rw-neo4j)
 [![Circle CI](https://circleci.com/gh/Financial-Times/special-reports-rw-neo4j.svg?style=shield)](https://circleci.com/gh/Financial-Times/special-reports-rw-neo4j)[![Go Report Card](https://goreportcard.com/badge/github.com/Financial-Times/special-reports-rw-neo4j)](https://goreportcard.com/report/github.com/Financial-Times/special-reports-rw-neo4j) [![Coverage Status](https://coveralls.io/repos/github/Financial-Times/special-reports-rw-neo4j/badge.svg)](https://coveralls.io/github/Financial-Times/special-reports-rw-neo4j)
 __An API for reading/writing special reports into Neo4j. Expects the special reports json supplied to be in the format that comes out of the special reports transformer.__
